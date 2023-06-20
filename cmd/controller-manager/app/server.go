@@ -40,6 +40,7 @@ import (
 	"volcano.sh/volcano/pkg/controllers/framework"
 	"volcano.sh/volcano/pkg/controllers/job"
 	"volcano.sh/volcano/pkg/kube"
+	"volcano.sh/volcano/pkg/signals"
 )
 
 const (
@@ -64,6 +65,12 @@ func Run(opt *options.ServerOption) error {
 	job.SetDetectionPeriodOfDependsOntask(opt.DetectionPeriodOfDependsOntask)
 
 	run := startControllers(config, opt)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-signals.SetupSignalHandler()
+		cancel()
+	}()
 
 	if !opt.EnableLeaderElection {
 		run(context.TODO())
@@ -100,7 +107,7 @@ func Run(opt *options.ServerOption) error {
 		return fmt.Errorf("couldn't create resource lock: %v", err)
 	}
 
-	leaderelection.RunOrDie(context.TODO(), leaderelection.LeaderElectionConfig{
+	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
 		Lock:          rl,
 		LeaseDuration: leaseDuration,
 		RenewDeadline: renewDeadline,
