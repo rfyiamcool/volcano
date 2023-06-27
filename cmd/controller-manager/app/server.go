@@ -66,14 +66,10 @@ func Run(opt *options.ServerOption) error {
 
 	run := startControllers(config, opt)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		<-signals.SetupSignalHandler()
-		cancel()
-	}()
+	ctx := signals.SetupSignalContext()
 
 	if !opt.EnableLeaderElection {
-		run(context.TODO())
+		run(ctx)
 		return fmt.Errorf("finished without leader elect")
 	}
 
